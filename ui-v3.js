@@ -1,0 +1,24 @@
+'use strict';
+function canSendReadingMessage(p,now=Date.now()){
+ const log=data.logs[p.i]?.[0];
+ return !data.activity && !data.carry && !p.path.length && !p.book && (!p.action||['idle','rest'].includes(p.action.kind)) && log?.kind==='read' && now-log.at<60000 && now-log.at>=5000 && !data.messageEvents['read-'+p.i];
+}
+const renderBeforeV3=render;
+render=function(){renderBeforeV3();if(page==='messages'){const top=document.createElement('button');top.className='wide keepsake-entry';top.textContent='▧ 留念盒';top.onclick=showNotes;$('#other').insertBefore(top,$('#other').children[1]||null);$('#read-notes')?.remove();}
+ if(page==='shop'){const counts={chain:0,used:0,decor:0,sets:64};for(const g of CATALOG)if(!g.id.startsWith('used-'))counts[g.kind]=(counts[g.kind]||0)+1;document.querySelectorAll('[data-shop]').forEach(b=>{const k=b.dataset.shop;b.textContent=({chain:'家具城',used:'二手集市',decor:'灯具饰品',surface:'墙纸地板',sets:'整套搭配'})[k]+' '+(k==='surface'?SURFACES.length:counts[k]);});const title=$('.page-title p');if(title)title.textContent='按系列搭配，买回去的就是图里的样子。';if(shopTab!=='surface'){const themeEntry=document.createElement('div');themeEntry.className='theme-entries';themeEntry.innerHTML=THEME_SETS.map(([key,name])=>`<button data-theme-entry="${name}"><img alt="" src="${engine.imageFor('theme-'+key+'-0')}"><span>${name}<small>16 件成套家具与小物</small></span></button>`).join('');$('#other .tabs').before(themeEntry);themeEntry.querySelectorAll('button').forEach(b=>b.onclick=()=>{shopTab='sets';shopSeries=b.dataset.themeEntry;render();$('#other').scrollTop=0;});const bar=document.createElement('div');bar.className='shop-categories';bar.innerHTML='<button data-category="all">全部</button><button data-category="seats">桌椅沙发</button><button data-category="storage">柜架</button><button data-category="beds">床与护理</button><button data-category="lights">灯与摆饰</button>';const grid=$('#other .grid');grid.before(bar);bar.querySelectorAll('button').forEach(b=>b.onclick=()=>{bar.querySelectorAll('button').forEach(a=>a.classList.toggle('active',a===b));grid.querySelectorAll('.item').forEach(card=>{const id=card.querySelector('[data-buy]')?.dataset.buy,g=GOODS_MAP.get(id),category=b.dataset.category;card.hidden=category!=='all'&&!(category==='seats'?['table','desk','coffee','chair','stool','sofa'].includes(g.family):category==='storage'?['shelf','cabinet','wardrobe','rack','magazines'].includes(g.family):category==='beds'?['bed','curtain','kitchen','fridge','counter'].includes(g.family):!['table','desk','coffee','chair','stool','sofa','shelf','cabinet','wardrobe','rack','magazines','bed','curtain','kitchen','fridge','counter'].includes(g.family));});});}}
+};
+showNotes=function(){const archive=data.notes||data.giftArchive;modal('留念盒',archive?'<p class="muted">已经收下的纸条保存在这里，想看时可以再翻。</p><div class="keepsake-list">'+GIFTS.map(([name,item,text])=>`<article><b>${name}</b><small>${item}</small><p>${escapeHtml(text)}</p></article>`).join('')+'</div>':'<p>这里可以收着以后收到的纸条。现在还空着。</p>');};
+$('#gift-marker').onclick=()=>{data.giftPending=false;save();showNotes();};
+const ledgerBeforeV3=ledger;
+ledger=function(){for(const row of data.ledger)if(row.name.includes('旧货款'))row.name=row.name.replace('归还旧货款','偿还负债');ledgerBeforeV3();};$('#ledger-button').onclick=ledger;
+const toolsBeforeV3=itemTools;
+itemTools=function(){toolsBeforeV3();const o=engine.draft;if(!o)return;const mode=engine.catalog(o.type).quarterTurn;$('#rotate-item').textContent=mode?'↻':'↔';$('#rotate-item').setAttribute('aria-label',mode?'旋转家具':'水平翻转家具');$('#rotate-item').onclick=()=>{const g=engine.catalog(o.type);o.rot=(o.rot+(g.quarterTurn?1:2))%4;};};engine.cb.itemTools=itemTools;
+const chatBeforeV3=chat;
+chat=function(i){chatBeforeV3(i);document.querySelectorAll('.bubble').forEach((bubble,j)=>{const at=data.messages[i][j]?.at;if(!at)return;const stamp=document.createElement('small');stamp.className='chat-stamp';stamp.textContent=fmtTime(at);bubble.appendChild(stamp);});};
+const tutorialBeforeV3=showTutorial;
+showTutorial=function(){tutorialBeforeV3();const el=$('#tutorial');if(el.hidden)return;let label=$('#tutorial-label');if(!label){label=document.createElement('strong');label.id='tutorial-label';el.insertBefore(label,el.firstChild);}label.textContent='新手引导 '+(data.tutorial+1)+' / '+tutorialTexts.length;if(data.tutorial===0&&engine.ready){engine.cam={x:705,y:240,z:Math.min(1.05,engine.w/650)};engine.clampCam();}};
+const oldInitAssets=engine.cb.assets;engine.cb.assets=()=>{oldInitAssets?.();showTutorial();};
+window.game.canSendReadingMessage=canSendReadingMessage;
+if(engine.ready){render();showTutorial();}
+
+function storeSupportedItems(uid){const props=data.furniture.filter(o=>o.supportUid===uid);for(const p of props)data.inventory[p.type]=(data.inventory[p.type]||0)+1;data.furniture=data.furniture.filter(o=>o.supportUid!==uid);}
