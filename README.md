@@ -4,6 +4,8 @@
 
 ## 开始体验
 
+[点击游玩花样年华照看所](https://pilicat913.github.io/hyyh-care-demo/)
+
 用静态服务器打开根目录的 `index.html`；不需要安装依赖或构建。
 
 ```sh
